@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Uygulaması</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+ </head>
+<body>
+    <style>
+:root {
+  --bg-color: #121212;
+  --text-color: #eee;
+  --input-bg: #2a2a2a;
+  --message-self: #4e54c8;
+  --message-other: #2c2c2c;
+  --header-bg: linear-gradient(to right, #4e54c8, #8f94fb);
+}
+
+.light-theme {
+  --bg-color: #f2f2f2;
+  --text-color: #111;
+  --input-bg: #e0e0e0;
+  --message-self: #d1e7ff;
+  --message-other: #ffffff;
+  --header-bg: linear-gradient(to right, #4facfe, #00f2fe);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: var(--bg-color);
+  color: var(--text-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  transition: background 0.3s ease;
+  flex-direction: column;
+}
+
+/* Tema geçiş düğmesi */
+.theme-toggle {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 2;
+}
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0;
+  right: 0; bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 24px;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+input:checked + .slider {
+  background-color: #2196F3;
+}
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+/* Konteyner */
+.chat-container {
+  width: 100%;
+  max-width: 420px;
+  height: 90vh;
+  background: var(--input-bg);
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+/* Başlık */
+.chat-header {
+  background: var(--header-bg);
+  color: white;
+  text-align: center;
+  padding: 16px;
+  font-weight: bold;
+  font-size: 20px;
+}
+
+/* Mesaj kutusu */
+#chat-box {
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Mesajlar */
+.message {
+  padding: 10px 14px;
+  border-radius: 16px;
+  max-width: 75%;
+  font-size: 14px;
+  word-wrap: break-word;
+  position: relative;
+  animation: fadeIn 0.3s ease;
+}
+
+.message.self {
+  background: var(--message-self);
+  color: #fff;
+  align-self: flex-end;
+  border-bottom-right-radius: 0;
+}
+
+.message.other {
+  background: var(--message-other);
+  color: var(--text-color);
+  align-self: flex-start;
+  border-bottom-left-radius: 0;
+}
+
+/* Saat */
+.message .time {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  font-size: 11px;
+  color: #aaa;
+}
+
+/* Giriş alanı */
+.chat-footer {
+  display: flex;
+  padding: 10px;
+  background: var(--input-bg);
+  border-top: 1px solid #444;
+}
+
+#message-input {
+  flex: 1;
+  padding: 12px;
+  border-radius: 30px;
+  border: none;
+  font-size: 14px;
+  background: #333;
+  color: white;
+  margin-right: 10px;
+  outline: none;
+}
+
+.light-theme #message-input {
+  background: #ddd;
+  color: #111;
+}
+
+#send-button {
+  background: #4e54c8;
+  color: white;
+  border: none;
+  border-radius: 30px;
+  padding: 12px 18px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+#send-button:hover {
+  background: #3a3fbb;
+}
+
+/* Scrollbar */
+#chat-box::-webkit-scrollbar {
+  width: 6px;
+}
+#chat-box::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 3px;
+}
+
+/* Animasyon */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+
+
+    </style>
+    <div class="theme-toggle">
+    <h5>Tema Rengi Koyu-Açık</h5>
+    <label class="switch">
+    <input type="checkbox" id="theme-toggle">
+    <span class="slider round"></span>
+    </label>
+    </div>
+
+   
+    <div class="chat-container">
+        <!-- Sohbet Header -->
+        <div class="chat-header">
+            Chat Uygulaması
+        </div>
+
+        <!-- Sohbet Mesajları Alanı -->
+        <div id="chat-box"></div>
+
+        <!-- Mesaj Giriş Alanı -->
+        <div class="chat-footer">
+            <input type="text" id="message-input" placeholder="Mesaj yazın..." autocomplete="off">
+        </div>
+    </div>
+<script>
+            var socket = io.connect('http://' + document.domain + ':' + location.port);
+        var username = "";
+
+        // Kullanıcı adı belirleme
+        window.onload = function() {
+            username = prompt("Lütfen kullanıcı adınızı girin:");
+            if (!username || username.trim() === "") {
+                username = "Anonim";
+            }
+
+            // Kullanıcı katılım mesajını göndermek
+            socket.emit('user_joined', { 'username': username });
+        };
+
+        // Mesaj gönderme
+        function sendMessage(message) {
+            socket.emit('message', { 'username': username, 'message': message });
+        }
+
+        // Mesaj girişi (Enter tuşu ile gönder)
+        document.getElementById('message-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.value.trim() !== "") {
+                sendMessage(e.target.value);
+                e.target.value = "";  // Inputu temizle
+            }
+        });
+
+        // Mesaj alındığında chat box'a ekleyin
+        socket.on('response', function(data) {
+            var chatBox = document.getElementById('chat-box');
+            var newMessage = document.createElement('div');
+            newMessage.classList.add('message');
+            newMessage.classList.add(data.username === username ? 'self' : 'other');
+            newMessage.innerHTML = `<strong>${data.username}</strong> <span>[${data.timestamp}]</span>: ${data.message}`;
+            chatBox.appendChild(newMessage);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            document.getElementById("theme-toggle").addEventListener("change", function () {
+    document.body.classList.toggle("light-theme");
+});
+
+    // Mesaj gönderme + saatli emoji destekli
+    function sendMessage(message) {
+    const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    socket.emit('message', { 'username': username, 'message': message, 'timestamp': timestamp });
+}
+
+    // Gelen mesaj
+    socket.on('response', function(data) {
+    var chatBox = document.getElementById('chat-box');
+    var newMessage = document.createElement('div');
+    newMessage.classList.add('message');
+    newMessage.classList.add(data.username === username ? 'self' : 'other');
+    newMessage.innerHTML = `
+      ${data.message}
+      <div class="time">${data.timestamp}</div>
+    `;
+    chatBox.appendChild(newMessage);
+    chatBox.scrollTop = chatBox.scrollHeight;
+});
+
+    // Gönder butonu
+    document.getElementById('send-button').addEventListener('click', function () {
+    const input = document.getElementById('message-input');
+    if (input.value.trim() !== "") {
+        sendMessage(input.value);
+        input.value = "";
+    }
+});
+
+        });
+</script>
+</body>
+</html>
